@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -14,6 +17,23 @@ func main() {
 
 func run(addr string) error {
 	// ==== DATABASE =====
+	database_url := "postgres://postgres:1234@localhost:5432/todo"
+	config, err := pgxpool.ParseConfig(database_url)
+	if err != nil {
+		panic(err)
+	}
+	config.MaxConns = 25
+	config.MinConns = 5
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+
+	if err != nil {
+		panic(err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(context.Background()); err != nil {
+		panic(err)
+	}
 
 	api := http.NewServeMux()
 
