@@ -6,33 +6,39 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	const PORT = ":8080"
-	if err := run(PORT); err != nil {
-		slog.Error("Failed to marshal JSON", "error", err)
+	err := godotenv.Load()
+
+	if err != nil {
+		slog.Error("Error loading .env file", "error", err)
+	}
+	cfg := config.Load()
+	if err := run(cfg); err != nil {
+		slog.Error("Server error", "error", err)
 	}
 }
 
-func run(addr string) error {
+func run(cfg *config.Config) error {
 	// ==== DATABASE =====
-	database_url := "postgres://postgres:1234@localhost:5432/todo"
-	config, err := pgxpool.ParseConfig(database_url)
+	config, err := pgxpool.ParseConfig(cfg.DatabaseRrl)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	config.MaxConns = 25
 	config.MinConns = 5
 
-	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+	ctx := context.Background()
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer pool.Close()
-	if err := pool.Ping(context.Background()); err != nil {
-		panic(err)
+	if err := pool.Ping(ctx); err != nil {
+		return err
 	}
 
 	api := http.NewServeMux()
@@ -45,6 +51,8 @@ func run(addr string) error {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"Hello, World!"}`))
 	})
+
+	addr := ":" + cfg.Port
 	slog.Info("Starting server on port" + addr)
 	return http.ListenAndServe(addr, nil)
 }
