@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"do_it_back/internal/config"
 	"do_it_back/internal/pkg"
 	"encoding/json"
 	"net/http"
@@ -28,11 +29,13 @@ type HandlerResponse struct {
 
 type Handler struct {
 	service *Service
+	cfg     *config.Config
 }
 
-func NewHandler(service *Service) *Handler {
+func NewHandler(cfg *config.Config, service *Service) *Handler {
 	return &Handler{
 		service: service,
+		cfg:     cfg,
 	}
 }
 
@@ -67,10 +70,17 @@ func (h *Handler) Register(
 		return
 	}
 
+	token, err := pkg.GenerateAccessToken(user.ID, h.cfg.JWTSecret)
+	if err != nil {
+		pkg.EncodeJSON(w, pkg.Response{Error: err.Error()}, http.StatusInternalServerError)
+		return
+	}
+
 	resp := HandlerResponse{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
+		Token: token,
 	}
 
 	pkg.EncodeJSON(w, pkg.Response{Data: resp}, http.StatusCreated)
@@ -98,10 +108,17 @@ func (h *Handler) Login(
 		return
 	}
 
+	token, err := pkg.GenerateAccessToken(user.ID, h.cfg.JWTSecret)
+	if err != nil {
+		pkg.EncodeJSON(w, pkg.Response{Error: err.Error()}, http.StatusInternalServerError)
+		return
+	}
+
 	resp := HandlerResponse{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
+		Token: token,
 	}
 	pkg.EncodeJSON(w, pkg.Response{Data: resp}, http.StatusCreated)
 }

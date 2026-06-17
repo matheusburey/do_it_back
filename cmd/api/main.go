@@ -4,6 +4,8 @@ import (
 	"context"
 	"do_it_back/internal/auth"
 	"do_it_back/internal/config"
+	"do_it_back/internal/middleware"
+	"do_it_back/internal/pkg"
 	"log/slog"
 	"net/http"
 
@@ -46,18 +48,18 @@ func run(cfg *config.Config) error {
 	api := http.NewServeMux()
 
 	// ===== MIDDLEWARE =====
+	server := middleware.LoggerMiddleware(api)
+	server = middleware.AuthMiddleware(cfg, server)
+	http.Handle("/api/", http.StripPrefix("/api", server))
 
 	// ===== ROUTES =====
 	// ROUTER: HEALTH
 	api.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"Hello, World!"}`))
+		pkg.EncodeJSON(w, pkg.Response{Data: "ok"}, http.StatusOK)
 	})
 
 	// ROUTER: AUTH
-	auth.AuthNewModule(api, pool)
-
-	http.Handle("/api/", http.StripPrefix("/api", api))
+	auth.AuthNewModule(api, cfg, pool)
 
 	addr := ":" + cfg.Port
 	slog.Info("Starting server on port" + addr)
