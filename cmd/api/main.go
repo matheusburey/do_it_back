@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"do_it_back/internal/auth"
+	"do_it_back/internal/config"
 	"log/slog"
 	"net/http"
 
@@ -51,6 +53,11 @@ func run(cfg *config.Config) error {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"Hello, World!"}`))
 	})
+
+	// ROUTER: AUTH
+	auth.AuthNewModule(api, pool)
+
+	http.Handle("/api/", http.StripPrefix("/api", api))
 
 	addr := ":" + cfg.Port
 	slog.Info("Starting server on port" + addr)
