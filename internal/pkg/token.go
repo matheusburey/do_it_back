@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const TIME_TOKEN_EXPIRATION = 24 * time.Minute
+const TIME_TOKEN_EXPIRATION = 24 * time.Hour
 
 type Claims struct {
 	UserID uuid.UUID `json:"user_id"`
@@ -46,8 +46,9 @@ func Validate(tokenString string, secret string) (*Claims, error) {
 		&Claims{},
 
 		func(token *jwt.Token) (any, error) {
-			return secret, nil
+			return []byte(secret), nil
 		},
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 	)
 
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func AuthNewModule(mux *http.ServeMux, cfg *config.Config, db *pgxpool.Pool) {
+func NewAuthModule(mux *http.ServeMux, cfg *config.Config, db *pgxpool.Pool) {
 	r := NewRepository(db)
 	s := NewService(r)
 	h := NewHandler(cfg, s)
