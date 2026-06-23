@@ -6,6 +6,7 @@ import (
 	"do_it_back/internal/config"
 	"do_it_back/internal/middleware"
 	"do_it_back/internal/pkg"
+	"do_it_back/internal/task"
 	"log/slog"
 	"net/http"
 
@@ -59,7 +60,10 @@ func run(cfg *config.Config) error {
 	})
 
 	// ROUTER: AUTH
-	auth.AuthNewModule(api, cfg, pool)
+	auth.NewAuthModule(api, cfg, pool)
+
+	// ROUTER: TASK
+	task.NewTaskModule(api, pool)
 
 	addr := ":" + cfg.Port
 	slog.Info("Starting server on port" + addr)
