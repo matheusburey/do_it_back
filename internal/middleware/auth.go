@@ -26,7 +26,7 @@ func AuthMiddleware(
 		if auth == "" {
 			pkg.EncodeJSON(
 				w,
-				pkg.Response{Error: "unauthorized"},
+				pkg.Response{Error: "token not found"},
 				http.StatusUnauthorized,
 			)
 
@@ -38,7 +38,7 @@ func AuthMiddleware(
 			"Bearer ",
 		)
 
-		_, err := pkg.Validate(token, cfg.JWTSecret)
+		claims, err := pkg.Validate(token, cfg.JWTSecret)
 
 		if err != nil {
 			pkg.EncodeJSON(
@@ -49,6 +49,9 @@ func AuthMiddleware(
 
 			return
 		}
+
+		ctx := pkg.ContextWithUserID(r.Context(), claims.UserID)
+		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
 	})
