@@ -5,6 +5,7 @@ import (
 	"do_it_back/internal/config"
 	"do_it_back/internal/pkg"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -89,6 +90,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		slog.Error("internal server error", "error", err)
 		pkg.EncodeJSON(
 			w,
 			pkg.Response{Error: "internal server error"},
@@ -99,7 +101,8 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	token, err := pkg.GenerateAccessToken(user.ID, h.cfg.JWTSecret)
 	if err != nil {
-		pkg.EncodeJSON(w, pkg.Response{Error: err.Error()}, http.StatusInternalServerError)
+		slog.Error("error generating token", "error", err)
+		pkg.EncodeJSON(w, pkg.Response{Error: "internal server error"}, http.StatusInternalServerError)
 		return
 	}
 
@@ -131,13 +134,24 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		pkg.EncodeJSON(w, pkg.Response{Error: "password or email is incorrect"}, http.StatusNotFound)
+		if errors.Is(err, ErrUserNotFound) {
+			pkg.EncodeJSON(w, pkg.Response{Error: "password or email is incorrect"}, http.StatusUnauthorized)
+			return
+		}
+		if errors.Is(err, ErrInvalidCredentials) {
+			pkg.EncodeJSON(w, pkg.Response{Error: "password or email is incorrect"}, http.StatusUnauthorized)
+			return
+		}
+
+		slog.Error("internal server error", "error", err)
+		pkg.EncodeJSON(w, pkg.Response{Error: "internal server error"}, http.StatusInternalServerError)
 		return
 	}
 
 	token, err := pkg.GenerateAccessToken(user.ID, h.cfg.JWTSecret)
 	if err != nil {
-		pkg.EncodeJSON(w, pkg.Response{Error: err.Error()}, http.StatusInternalServerError)
+		slog.Error("error generating token", "error", err)
+		pkg.EncodeJSON(w, pkg.Response{Error: "internal server error"}, http.StatusInternalServerError)
 		return
 	}
 
@@ -147,5 +161,5 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Email: user.Email,
 		Token: token,
 	}
-	pkg.EncodeJSON(w, pkg.Response{Data: resp}, http.StatusCreated)
+	pkg.EncodeJSON(w, pkg.Response{Data: resp}, http.StatusOK)
 }

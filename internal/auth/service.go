@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -51,6 +52,10 @@ func (s *Service) Login(
 	)
 
 	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return nil, ErrInvalidCredentials
+		}
+
 		return nil, err
 	}
 
