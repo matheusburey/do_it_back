@@ -1,6 +1,7 @@
 package task
 
 import (
+	"context"
 	"do_it_back/internal/pkg"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,17 @@ type UpdateRequest struct {
 	Title       *string `json:"title"`
 	Description *string `json:"description"`
 	IsCompleted *bool   `json:"is_completed"`
+}
+
+func (cr CreateRequest) Valid(ctx context.Context) pkg.Evaluator {
+	var eval pkg.Evaluator
+
+	eval.CheckField(pkg.NotBlank(cr.Title), "title", "title is required")
+	eval.CheckField(pkg.MinLength(cr.Title, 5) && pkg.MaxLength(cr.Title, 100), "title", "min length is 5 and max length is 100")
+	eval.CheckField(pkg.NotBlank(cr.Description), "description", "description is required")
+	eval.CheckField(pkg.MinLength(cr.Description, 5) && pkg.MaxLength(cr.Description, 100), "description", "min length is 5 and max length is 100")
+
+	return eval
 }
 
 type Handler struct {
@@ -55,12 +67,11 @@ func (h *Handler) Create(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	var req CreateRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	data, problems, err := pkg.DecodeValidJSON[CreateRequest](r)
+	if err != nil {
 		pkg.EncodeJSON(
 			w,
-			pkg.Response{Error: "invalid body"},
+			pkg.Response{Error: "One or more fields are invalid.", Fields: problems},
 			http.StatusBadRequest,
 		)
 		return
@@ -76,9 +87,9 @@ func (h *Handler) Create(
 	task, err := h.service.Create(
 		r.Context(),
 		user_id,
-		req.Title,
-		req.Description,
-		req.IsCompleted,
+		data.Title,
+		data.Description,
+		data.IsCompleted,
 	)
 
 	if err != nil {
