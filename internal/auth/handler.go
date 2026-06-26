@@ -1,9 +1,10 @@
 package auth
 
 import (
+	"context"
 	"do_it_back/internal/config"
 	"do_it_back/internal/pkg"
-	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -15,9 +16,34 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
+func (rr RegisterRequest) Valid(ctx context.Context) pkg.Evaluator {
+	var eval pkg.Evaluator
+
+	eval.CheckField(pkg.NotBlank(rr.Name), "name", "name is required")
+	eval.CheckField(pkg.MinLength(rr.Name, 5) && pkg.MaxLength(rr.Name, 100), "name", "min length is 5 and max length is 100")
+	eval.CheckField(pkg.NotBlank(rr.Email), "email", "email is required")
+	eval.CheckField(pkg.IsEmail(rr.Email), "email", "email is invalid")
+	eval.CheckField(pkg.MinLength(rr.Email, 10) && pkg.MaxLength(rr.Email, 255), "email", "min length is 10 and max length is 255")
+	eval.CheckField(pkg.NotBlank(rr.Password), "password", "password is required")
+	eval.CheckField(pkg.MinLength(rr.Password, 8) && pkg.MaxLength(rr.Password, 255), "password", "min length is 8 and max length is 255")
+	eval.CheckField(pkg.IsPassword(rr.Password), "password", "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one special character and one number.")
+
+	return eval
+}
+
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+func (lr LoginRequest) Valid(ctx context.Context) pkg.Evaluator {
+	var eval pkg.Evaluator
+
+	eval.CheckField(pkg.NotBlank(lr.Email), "email", "email is required")
+	eval.CheckField(pkg.IsEmail(lr.Email), "email", "email is invalid")
+	eval.CheckField(pkg.NotBlank(lr.Password), "password", "password is required")
+
+	return eval
 }
 
 type HandlerResponse struct {
@@ -39,16 +65,12 @@ func NewHandler(cfg *config.Config, service *Service) *Handler {
 	}
 }
 
-func (h *Handler) Register(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
-	var req RegisterRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	data, problems, err := pkg.DecodeValidJSON[RegisterRequest](r)
+	if err != nil {
 		pkg.EncodeJSON(
 			w,
-			pkg.Response{Error: "invalid body"},
+			pkg.Response{Error: "One or more fields are invalid.", Fields: problems},
 			http.StatusBadRequest,
 		)
 		return
@@ -56,16 +78,21 @@ func (h *Handler) Register(
 
 	user, err := h.service.Register(
 		r.Context(),
-		req.Name,
-		req.Email,
-		req.Password,
+		data.Name,
+		data.Email,
+		data.Password,
 	)
 
 	if err != nil {
+		if errors.Is(err, ErrEmailAlreadyExists) {
+			pkg.EncodeJSON(w, pkg.Response{Error: "user already exists"}, http.StatusConflict)
+			return
+		}
+
 		pkg.EncodeJSON(
 			w,
-			pkg.Response{Error: err.Error()},
-			http.StatusBadRequest,
+			pkg.Response{Error: "internal server error"},
+			http.StatusInternalServerError,
 		)
 		return
 	}
@@ -86,21 +113,21 @@ func (h *Handler) Register(
 	pkg.EncodeJSON(w, pkg.Response{Data: resp}, http.StatusCreated)
 }
 
-func (h *Handler) Login(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
-	var req LoginRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		pkg.EncodeJSON(w, pkg.Response{Error: "invalid body"}, http.StatusBadRequest)
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	data, problems, err := pkg.DecodeValidJSON[LoginRequest](r)
+	if err != nil {
+		pkg.EncodeJSON(
+			w,
+			pkg.Response{Error: "One or more fields are invalid.", Fields: problems},
+			http.StatusBadRequest,
+		)
 		return
 	}
 
 	user, err := h.service.Login(
 		r.Context(),
-		req.Email,
-		req.Password,
+		data.Email,
+		data.Password,
 	)
 
 	if err != nil {

@@ -9,8 +9,9 @@ import (
 )
 
 type Response struct {
-	Error string `json:"error,omitempty"`
-	Data  any    `json:"data,omitempty"`
+	Error  string            `json:"error,omitempty"`
+	Fields map[string]string `json:"fields,omitempty"`
+	Data   any               `json:"data,omitempty"`
 }
 
 func EncodeJSON(w http.ResponseWriter, data Response, status int) error {

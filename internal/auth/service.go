@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -27,14 +26,8 @@ func (s *Service) Register(
 		return nil, err
 	}
 
-	name = strings.TrimSpace(name)
-
-	if name == "" {
-		return nil, errors.New("name is required")
-	}
-
 	user := User{
-		Name:     name,
+		Name:     strings.TrimSpace(name),
 		Email:    email,
 		Password: string(hash),
 	}
@@ -46,15 +39,10 @@ func (s *Service) Login(
 	ctx context.Context,
 	email, password string,
 ) (*User, error) {
-	email = strings.TrimSpace(email)
-	if email == "" {
-		return &User{}, errors.New("email is required")
-	}
-
 	u, err := s.repo.FindByEmail(ctx, email)
 
 	if err != nil {
-		return &User{}, err
+		return nil, err
 	}
 
 	err = bcrypt.CompareHashAndPassword(
@@ -63,7 +51,7 @@ func (s *Service) Login(
 	)
 
 	if err != nil {
-		return &User{}, err
+		return nil, err
 	}
 
 	return u, nil

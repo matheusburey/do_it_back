@@ -2,8 +2,9 @@ package auth
 
 import (
 	"context"
-	"log/slog"
+	"errors"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,10 +31,7 @@ func NewRepository(
 	}
 }
 
-func (r *PostgresRepository) Create(
-	ctx context.Context,
-	user User,
-) (*User, error) {
+func (r *PostgresRepository) Create(ctx context.Context, user User) (*User, error) {
 	query := `
         INSERT INTO users (
             name,
@@ -62,8 +60,16 @@ func (r *PostgresRepository) Create(
 	)
 
 	if err != nil {
-		slog.Error("database", "error", err)
-		return &user, err
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case "23505": // unique_violation
+				return nil, ErrEmailAlreadyExists
+			}
+		}
+
+		return nil, err
 	}
 
 	return &user, nil

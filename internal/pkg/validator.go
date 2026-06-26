@@ -45,5 +45,14 @@ func Match(value string, rx *regexp.Regexp) bool {
 }
 
 func IsEmail(value string) bool {
-	return Match(value, regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"))
+	email_regex := "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+	return Match(value, regexp.MustCompile(email_regex))
+}
+
+func IsPassword(value string) bool {
+	hasLower := Match(value, regexp.MustCompile("[a-z]"))
+	hasUpper := Match(value, regexp.MustCompile("[A-Z]"))
+	hasNumber := Match(value, regexp.MustCompile("[0-9]"))
+	hasSymbol := Match(value, regexp.MustCompile("[!@#$%^&*]"))
+	return hasLower && hasUpper && hasNumber && hasSymbol
 }
