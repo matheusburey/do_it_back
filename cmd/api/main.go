@@ -9,6 +9,7 @@ import (
 	"do_it_back/internal/task"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -66,6 +67,15 @@ func run(cfg *config.Config) error {
 	task.NewTaskModule(api, pool)
 
 	addr := ":" + cfg.Port
-	slog.Info("Starting server on port" + addr)
-	return http.ListenAndServe(addr, nil)
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           http.DefaultServeMux,
+		ReadTimeout:       10 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
+	slog.Info("Starting server", "addr", addr)
+	return srv.ListenAndServe()
 }
