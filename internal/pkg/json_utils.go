@@ -25,7 +25,8 @@ func EncodeJSON(w http.ResponseWriter, data Response, status int) error {
 	return nil
 }
 
-func DecodeValidJSON[T Validator](r *http.Request) (T, map[string]string, error) {
+func DecodeValidJSON[T Validator](w http.ResponseWriter, r *http.Request) (T, map[string]string, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var data T
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		return data, nil, err

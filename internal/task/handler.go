@@ -67,8 +67,13 @@ func (h *Handler) Create(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	data, problems, err := pkg.DecodeValidJSON[CreateRequest](r)
+	data, problems, err := pkg.DecodeValidJSON[CreateRequest](w, r)
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			pkg.EncodeJSON(w, pkg.Response{Error: "request body too large"}, http.StatusRequestEntityTooLarge)
+			return
+		}
 		pkg.EncodeJSON(
 			w,
 			pkg.Response{Error: "One or more fields are invalid.", Fields: problems},

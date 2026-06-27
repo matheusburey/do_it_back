@@ -67,8 +67,13 @@ func NewHandler(cfg *config.Config, service *Service) *Handler {
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	data, problems, err := pkg.DecodeValidJSON[RegisterRequest](r)
+	data, problems, err := pkg.DecodeValidJSON[RegisterRequest](w, r)
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			pkg.EncodeJSON(w, pkg.Response{Error: "request body too large"}, http.StatusRequestEntityTooLarge)
+			return
+		}
 		pkg.EncodeJSON(
 			w,
 			pkg.Response{Error: "One or more fields are invalid.", Fields: problems},
@@ -117,8 +122,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	data, problems, err := pkg.DecodeValidJSON[LoginRequest](r)
+	data, problems, err := pkg.DecodeValidJSON[LoginRequest](w, r)
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			pkg.EncodeJSON(w, pkg.Response{Error: "request body too large"}, http.StatusRequestEntityTooLarge)
+			return
+		}
 		pkg.EncodeJSON(
 			w,
 			pkg.Response{Error: "One or more fields are invalid.", Fields: problems},
