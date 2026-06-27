@@ -60,6 +60,13 @@ func run(cfg *config.Config) error {
 	// ===== ROUTES =====
 	// ROUTER: HEALTH
 	api.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := pool.Ping(ctx); err != nil {
+			slog.Error("Database error", "error", err)
+			pkg.EncodeJSON(w, pkg.Response{Error: "internal server error"}, http.StatusInternalServerError)
+			return
+		}
 		pkg.EncodeJSON(w, pkg.Response{Data: "ok"}, http.StatusOK)
 	})
 
