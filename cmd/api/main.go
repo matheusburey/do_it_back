@@ -9,6 +9,9 @@ import (
 	"do_it_back/internal/task"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -76,6 +79,26 @@ func run(cfg *config.Config) error {
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    1 << 20,
 	}
-	slog.Info("Starting server", "addr", addr)
-	return srv.ListenAndServe()
+
+	// Channel to signal server shutdown
+	shutdownCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	serverErr := make(chan error, 1)
+	go func() {
+		slog.Info("starting server", "addr", addr)
+		serverErr <- srv.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serverErr:
+		return err
+	case <-shutdownCtx.Done():
+		slog.Info("shutting down server")
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(timeoutCtx); err != nil {
+			return err // o Shutdown estourou o prazo de 10s
+		}
+		return nil
+	}
 }
