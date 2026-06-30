@@ -104,7 +104,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := pkg.GenerateAccessToken(user.ID, h.cfg.JWTSecret)
+	token, err := pkg.GenerateAccessToken(user.ID, h.cfg.JWTSecret, pkg.TIME_TOKEN_EXPIRATION)
 	if err != nil {
 		slog.Error("error generating token", "error", err)
 		pkg.EncodeJSON(w, pkg.Response{Error: "internal server error"}, http.StatusInternalServerError)
@@ -158,7 +158,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := pkg.GenerateAccessToken(user.ID, h.cfg.JWTSecret)
+	token, err := pkg.GenerateAccessToken(user.ID, h.cfg.JWTSecret, pkg.TIME_TOKEN_EXPIRATION)
 	if err != nil {
 		slog.Error("error generating token", "error", err)
 		pkg.EncodeJSON(w, pkg.Response{Error: "internal server error"}, http.StatusInternalServerError)
