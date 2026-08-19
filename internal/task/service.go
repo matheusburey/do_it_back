@@ -2,7 +2,6 @@ package task
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/google/uuid"
@@ -30,7 +29,7 @@ func (s *Service) Create(
 	title = strings.TrimSpace(title)
 
 	if title == "" {
-		return nil, errors.New("title is required")
+		return nil, ErrTitleRequired
 	}
 
 	t := Task{

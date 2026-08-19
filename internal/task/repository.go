@@ -102,7 +102,14 @@ func (r *PostgresRepository) FindByID(
 		&task.UpdatedAt,
 	)
 
-	return &task, err
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+
+	return &task, nil
 }
 
 func (r *PostgresRepository) Update(
@@ -135,7 +142,14 @@ func (r *PostgresRepository) Update(
 		&task.UpdatedAt,
 	)
 
-	return task, err
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+
+	return task, nil
 }
 
 func (r *PostgresRepository) Delete(ctx context.Context, id, user_id uuid.UUID) error {
@@ -147,7 +161,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, id, user_id uuid.UUID) 
 	}
 
 	if result.RowsAffected() == 0 {
-		return errors.New("task not found")
+		return ErrTaskNotFound
 	}
 
 	return nil
